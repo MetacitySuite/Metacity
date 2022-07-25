@@ -15,7 +15,7 @@ public:
     {
         stop = true;
         print_thread->join();
-        printf("\n%s - finished.\n", title.c_str());
+        printf("\n%s - finished at %zu\n", title.c_str(), counter);
     }
 
     void update() {
@@ -47,3 +47,5 @@ protected:
     string icon = "-\\|/";
     char position; 
 };
+
+

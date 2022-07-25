@@ -53,18 +53,32 @@ bool intersects(const BBox &b, Ray &ray, tfloat &min_t, tfloat &max_t)
 
 //===============================================================================
 
-BVH::BVH(const vector<tvec3> & triangles)
+BVH::BVH(const vector<shared_ptr<Model>> & models_)
 {
 
     BBox main;
     set_empty(main);
-    for (size_t i = 0, j = 0; i < triangles.size(); i += 3, ++j)
+
+    for (auto & model : models_)
     {
-        auto node = make_shared<BVHLeafNode>(triangles[i], triangles[i + 1], triangles[i + 2]);
-        for_triangle(&(triangles[i]), node->bbox);
-        extend(main, node->bbox);
-        node->type = BVHNodeType::leaf;
-        nodes.push_back(node);
+        const auto attr = model->get_attribute("POSITION");
+        
+        if (!attr)
+            continue;
+
+        if (attr->type() != AttributeType::POLYGON)
+            continue;
+        
+        //iterate over triangles
+        for (size_t i = 0, j = 0; i < attr->size(); i += 3, ++j)
+        {
+            auto node = make_shared<BVHLeafNode>((*attr)[i], (*attr)[i + 1], (*attr)[i + 2]);
+            for_triangle(&((*attr)[i]), node->bbox);
+            extend(main, node->bbox);
+            node->type = BVHNodeType::leaf;
+            nodes.push_back(node);
+        }
+
     }
 
     root = build(main, 0, nodes.size(), 0);
@@ -184,7 +198,7 @@ tfloat BVH::traceDownRegualarRay(const tfloat x, const tfloat y, const tfloat z)
         return ray.t;
 
     recursiveTrace(ray, root);
-    return ray.t;
+    return 10000 - ray.t;
 }
 
 void BVH::recursiveTrace(Ray &ray, shared_ptr<BVHNode> node) const

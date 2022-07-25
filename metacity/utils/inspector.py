@@ -45,7 +45,7 @@ def inspect_grid(directory: str) -> None:
                 accessor_id = primitive['attributes']['POSITION']
                 accessor = data['accessors'][accessor_id]
                 span = [ b - a for a, b in zip(accessor['min'], accessor['max']) ]
-                if any(x <= 0 for x in span):
+                if any(x < 0 for x in span):
                     print_indented(3, f"{mesh_id} has negative span: {span}")
                 if accessor['count'] == 0:
                     print_indented(3, f"{mesh_id} has zero count")

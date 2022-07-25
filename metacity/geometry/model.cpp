@@ -19,6 +19,12 @@ void Model::merge(shared_ptr<Model> model)
             attrib[pair.first]->merge(pair.second);
         }
     }
+
+    /*if (metadata.is_array()) {
+        metadata.push_back(model->metadata);
+    } else {
+        metadata = { metadata, model->metadata };
+    }*/
 }
 
 shared_ptr<Model> Model::clone() const
@@ -50,7 +56,7 @@ tvec3 Model::get_centroid() const
     return centroid;
 }
 
-void Model::set_metadata(nlohmann::json data)
+void Model::set_metadata(const nlohmann::json & data)
 {
     for (auto & pair : data.items()) {
         metadata[pair.key()] = pair.value();
@@ -65,7 +71,8 @@ nlohmann::json Model::get_metadata() const
 
 shared_ptr<Attribute> Model::get_attribute(const string &name) const {
     if (attrib.find(name) == attrib.end()) {
-        throw runtime_error("Attribute does not exist");
+        //throw runtime_error("Attribute does not exist");
+        return nullptr;
     }
     return attrib.at(name);
 }
@@ -77,30 +84,7 @@ bool Model::attribute_exists(const string &name) {
 
 void Model::compute_normals()
 {
-    /*if (attrib.find("POSITION") == attrib.end()) {
-        throw runtime_error("No position data");
-    }  
-
-    const auto positions = attrib.at("POSITION");
-    auto normals = make_shared<Attribute>();
-
-    for (int i = 0; i < positions->size(); i++) {
-        auto normal = tvec3(0, 0, 0);
-        for (int j = 0; j < positions->size(); j++) {
-            if (i == j) {
-                continue;
-            }
-            auto edge = positions->at(i) - positions->at(j);
-            auto edge_length = edge.length();
-            auto edge_normal = edge / edge_length;
-            normal += edge_normal;
-        }
-        normal /= positions->size();
-        normals->push_back(normal);
-    }
-
-
-    attrib["NORMAL"] = normals;*/
+    //TODO
 }
 
 bool Model::has_any_geometry() const
@@ -109,7 +93,7 @@ bool Model::has_any_geometry() const
         return false;
     }
 
-    if (attrib.at("POSITION")->size() < 3) {
+    if (attrib.at("POSITION")->size() < 1) {
         return false;
     }
 
@@ -119,7 +103,7 @@ bool Model::has_any_geometry() const
 void Model::to_gltf(tinygltf::Model & model) const
 {
     int mesh_index;
-    
+
     if (!has_any_geometry()) {
         return;
     }
@@ -225,13 +209,13 @@ void Model::from_gltf(const tinygltf::Model & model, const int mesh_index)
     metadata = to_json_value(model.meshes[mesh_index].extras);
     const tinygltf::Primitive & primitive = mesh.primitives[0];
     from_gltf_attribute(model, primitive, "POSITION", type_from_gltf(primitive.mode));
-    //from_gltf_attribute(model, primitive, "NORMAL", AttributeType::NORMAL);
 }
 
 void Model::from_gltf_attribute(const tinygltf::Model & model, const tinygltf::Primitive & primitive, const string &name, AttributeType type)
 {
     if (primitive.attributes.find(name) == primitive.attributes.end()) {
-        throw runtime_error("Attribute does not exist");
+        //throw runtime_error("Attribute does not exist");
+        return;
     }
 
     int attribute_index = primitive.attributes.at(name);

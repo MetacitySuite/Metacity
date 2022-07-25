@@ -1,6 +1,7 @@
 #include <fstream>
 #include "grid.hpp"
 #include "progress.hpp"
+#include "simplify.hpp"
 #include "gltf/json.hpp"
 
 
@@ -27,13 +28,25 @@ void Grid::add_model(shared_ptr<Model> model)
     grid[key].push_back(model);
 }
 
-void Grid::to_gltf(const string & folder, bool merge) const
+void Grid::tile_merge()
+{
+    Progress bar("Merging tiles");
+    for (auto & pair : grid) {
+        bar.update();
+        auto models = pair.second;
+        auto merged = simplify::merge_models(models);
+        pair.second.clear();
+        pair.second.push_back(merged);
+    }
+}
+
+void Grid::to_gltf(const string & folder) const
 {
     Progress bar("Exporting grid");
     for (auto & pair : grid) {
         bar.update();
 
-        string filename = folder + "/tile" + to_string(pair.first.first) + "_" + to_string(pair.first.second) + ".gltf";
+        string filename = folder + "/tile" + to_string(pair.first.first) + "_" + to_string(pair.first.second) + ".glb";
 
         tinygltf::Model gltf_model;
         tinygltf::Asset asset;
@@ -41,18 +54,13 @@ void Grid::to_gltf(const string & folder, bool merge) const
         asset.generator = "Metacity";
         gltf_model.asset = asset;
 
-        if (merge) {
-            const auto & model = merge_models(pair.second);
+        for (auto & model : pair.second) {
             model->to_gltf(gltf_model);
-        } else {
-            for (auto & model : pair.second) {
-                model->to_gltf(gltf_model);
-            }
         }
         
         tinygltf::TinyGLTF gltf;
         gltf.SetStoreOriginalJSONForExtrasAndExtensions(true);
-        gltf.WriteGltfSceneToFile(&gltf_model, filename, true, true, true, false);
+        gltf.WriteGltfSceneToFile(&gltf_model, filename, true, true, true, true);
     }
 
     export_layout(folder);
@@ -69,7 +77,7 @@ void Grid::export_layout(const string & folder) const
         nlohmann::json tile;
         tile["x"] = pair.first.first;
         tile["y"] = pair.first.second;
-        tile["file"] = "tile" + to_string(pair.first.first) + "_" + to_string(pair.first.second) + ".gltf";
+        tile["file"] = "tile" + to_string(pair.first.first) + "_" + to_string(pair.first.second) + ".glb";
         tile["size"] = pair.second.size();
         layout["tiles"].push_back(tile);
     }

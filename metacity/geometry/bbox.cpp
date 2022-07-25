@@ -1,5 +1,7 @@
 #include "bbox.hpp"
 
+using namespace std;
+
 void for_triangle(const tvec3 t[3], BBox & box)
 {
     box.min.x = min(t[0].x, min(t[1].x, t[2].x));

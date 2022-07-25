@@ -23,7 +23,7 @@ public:
     shared_ptr<Attribute> get_attribute(const string &name) const;
     bool attribute_exists(const string &name);
 
-    void set_metadata(nlohmann::json data);
+    void set_metadata(const nlohmann::json & data);
     nlohmann::json get_metadata() const;
 
     void from_gltf(const tinygltf::Model & model, const int mesh_index);
@@ -49,6 +49,4 @@ protected:
     unordered_map<string, shared_ptr<Attribute>> attrib;
     nlohmann::json metadata;
 };
-
-shared_ptr<Model> merge_models(vector<shared_ptr<Model>> models);
 

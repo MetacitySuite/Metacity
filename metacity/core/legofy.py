@@ -3,7 +3,6 @@ from typing import Tuple
 from metacity.geometry import LegoBuilder
 from metacity.utils.filesystem import write_json
 import metacity.utils.filesystem as fs
-from tqdm import tqdm
 #from metacity.utils.transform import tile_coords_in_range
 import os
 

@@ -1,12 +1,18 @@
+from numpy import number
 from metacity.utils.filesystem import read_json
 from metacity.geometry import Attribute, Model
+from metacity.geometry import Progress
+from typing import List
+from pyproj import Proj, Transformer
 
 
 __all__ = ["parse", "parse_data"]
 
+
 class Geometry:
     def __init__(self, data):
         self.data = data
+        self.transform = None
 
     @property
     def dim(self):
@@ -19,6 +25,19 @@ class Geometry:
                 f"Encountered primitive with unsupported dimension {d}")
         return d
 
+    def set_projection(self, from_crs: str, to_crs: str):
+        if from_crs is None or to_crs is None:
+            return
+
+        proj_from = Proj(from_crs, preserve_units=False)
+        proj_to = Proj(to_crs, preserve_units=False)
+        self.transform = Transformer.from_proj(proj_from, proj_to)
+
+
+    def project(self, coordinates: List[List[float]]):
+        if self.transform is None:
+            return coordinates
+        return [ p for p in self.transform.itransform(coordinates) ]
 
     @property
     def coordinates(self):
@@ -56,30 +75,57 @@ def to_model(attr: Attribute):
     return model
 
 
+###############################################################################
+
+
+def parse_point(g: Geometry, attr: Attribute, dim: int, vertices: List[List[float]]):
+    vertices = g.project(vertices)
+    vertices = flatten(vertices)
+    if dim == 2:
+        attr.push_point2D(vertices)
+    elif dim == 3:
+        attr.push_point3D(vertices)
+
+
+def parse_line(g: Geometry, attr: Attribute, dim: int, line: List[List[float]]):
+    l = g.project(line)
+    l = flatten(line)
+    if dim == 2:
+        attr.push_line2D(l)
+    elif dim == 3:
+        attr.push_line3D(l)
+
+
+def parse_polygon(g: Geometry, attr: Attribute, dim: int, polygon: List[List[List[float]]]):
+    polygon = [ g.project(p) for p in polygon ]
+    p = flatten_polygon(polygon)
+    if dim == 2:
+        attr.push_polygon2D(p)
+    elif dim == 3:
+        attr.push_polygon3D(p)
+
+
+###############################################################################
+
+
 def model_from_point(geometry: Geometry):
     attr = Attribute()
-    if geometry.dim == 2:
-        attr.push_point2D(geometry.coordinates)
-    elif geometry.dim == 3:
-        attr.push_point3D(geometry.coordinates)
+    vertices = [geometry.coordinates]
+    parse_point(geometry, attr, geometry.dim, vertices)
     return [to_model(attr)]
 
 
 def model_from_multipoint(geometry: Geometry):
     attr = Attribute()
-    if geometry.dim == 2:
-        attr.push_point2D(flatten(geometry.coordinates))
-    elif geometry.dim == 3:
-        attr.push_point3D(flatten(geometry.coordinates))
+    vertices = geometry.coordinates
+    parse_point(geometry, attr, geometry.dim, geometry.coordinates)
     return [to_model(attr)]
 
 
 def model_from_linestring(geometry: Geometry):
     attr = Attribute()
-    if geometry.dim == 2:
-        attr.push_line2D(flatten(geometry.coordinates))
-    elif geometry.dim == 3:
-        attr.push_line3D(flatten(geometry.coordinates))
+    vertices = geometry.coordinates
+    parse_line(geometry, attr, geometry.dim, vertices)
     return [to_model(attr)]
 
 
@@ -87,19 +133,14 @@ def model_from_multilinestring(geometry: Geometry):
     attr = Attribute()
     dim = geometry.dim
     for line in geometry.coordinates:
-        if dim == 2:
-            attr.push_line2D(flatten(line))
-        elif dim == 3:
-            attr.push_line3D(flatten(line))
+        parse_line(geometry, attr, dim, line)
     return [to_model(attr)]
 
 
 def model_from_polygon(geometry: Geometry):
     attr = Attribute()
-    if geometry.dim == 2:
-        attr.push_polygon2D(flatten_polygon(geometry.coordinates))
-    elif geometry.dim == 3:
-        attr.push_polygon3D(flatten_polygon(geometry.coordinates))
+    vertices = geometry.coordinates
+    parse_polygon(geometry, attr, geometry.dim, vertices)
     return [to_model(attr)]
 
 
@@ -107,10 +148,7 @@ def model_from_multipolygon(geometry: Geometry):
     attr = Attribute()
     dim = geometry.dim
     for polygon in geometry.coordinates:
-        if dim == 2:
-            attr.push_polygon2D(flatten_polygon(polygon))
-        elif dim == 3:
-            attr.push_polygon3D(flatten_polygon(polygon))
+        parse_polygon(geometry, attr, dim, polygon)
     return [to_model(attr)]
 
 
@@ -133,11 +171,13 @@ typedict = {
 }
 
 
-def parse_feature(feature: Feature):
+def parse_feature(feature: Feature, from_crs: str, to_crs: str, progress: Progress = None):
     #try:
+    feature.geometry.set_projection(from_crs, to_crs)
     model_list = typedict[feature.geometry.geometry_type](feature.geometry)
-    #TODO parse metadata
     for model in model_list:
+        if progress is not None:
+            progress.update()
         model.set_metadata(feature.properties)
     return model_list
     #except:
@@ -149,16 +189,16 @@ def parse_feature(feature: Feature):
     return []
 
 
-def parse_data(data):
+def parse_data(data, from_crs: str, to_crs: str, progress: Progress = None):
     models = []
     for f in data['features']:
         feature = Feature(f)
-        models.extend(parse_feature(feature))
+        models.extend(parse_feature(feature, from_crs, to_crs, progress))
     return models
 
 
-def parse(input_file: str):
+def parse(input_file: str, from_crs: str = None, to_crs: str = None, progress: Progress = None):
     contents = read_json(input_file)
-    return parse_data(contents)
+    return parse_data(contents, from_crs, to_crs, progress)
 
 

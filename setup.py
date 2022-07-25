@@ -141,12 +141,13 @@ setup(
     python_requires='>=3.8',   
     install_requires = [
         "numpy>=1.22.0",
-        "tqdm>=4.62.0",
-        "geopandas>=0.9.0",
+        "geopandas>=0.11.1",
+        "pytest>=6.2.4",
+        "pytest-cov>=2.12.1",
+        "twine>=3.4.2",
+        "orjson>=3.6.4",
         "setuptools>=42",
-        "wheel",
-        "lark>=0.11.3",
-        "orjson>=3.6.4"
+        "wheel"
     ],
     zip_safe=False,
     include_package_data=True

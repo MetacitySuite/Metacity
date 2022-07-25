@@ -411,9 +411,7 @@ Praha/
 html/
 tmp/
 ng_*
-terrain/
-buildings/
-bridges/
 data-buildings/
 data-terrain/
 data-bridges/
+data-trees/

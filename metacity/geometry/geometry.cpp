@@ -5,6 +5,7 @@
 #include "gltf/pybind11_json.hpp"
 #include "model.hpp"
 #include "attribute.hpp"
+#include "progress.hpp"
 #include "layer.hpp"
 #include "grid.hpp"
 
@@ -42,12 +43,19 @@ PYBIND11_MODULE(geometry, m) {
         .def("get_models", &Layer::get_models)
         .def("to_gltf", &Layer::to_gltf)
         .def("from_gltf", &Layer::from_gltf)
+        .def("map_to_height", &Layer::map_to_height)
+        .def("simplify_envelope", &Layer::simplify_envelope)
+        .def("simplify_remesh_height", &Layer::simplify_remesh_height)
         .def_property_readonly("size", &Layer::size);
 
     py::class_<Grid, std::shared_ptr<Grid>>(m, "Grid")
         .def(py::init<tfloat, tfloat>())
         .def("add_layer", &Grid::add_layer)
         .def("add_model", &Grid::add_model)
-        .def("to_gltf", &Grid::to_gltf)
-        .def_property_readonly("grid", &Grid::get_grid);
+        .def("tile_merge", &Grid::tile_merge)
+        .def("to_gltf", &Grid::to_gltf);
+
+    py::class_<Progress, std::shared_ptr<Progress>>(m, "Progress")
+        .def(py::init<string>())
+        .def("update", &Progress::update);
 }
